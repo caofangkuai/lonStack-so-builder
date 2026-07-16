@@ -1,0 +1,73 @@
+name: 从boot.img构建preload.so
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 安装依赖库
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y make clang lld wget curl binutils
+    
+    - name: 拉取源码
+      uses: actions/checkout@v4
+      
+    - name: 从Releases下载 boot.img
+      run: |
+        DOWNLOAD_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/upload | \
+                       grep -o '"browser_download_url": "[^"]*boot\.img"' | \
+                       head -1 | \
+                       sed 's/"browser_download_url": "//' | \
+                       sed 's/"//')
+        if [ -z "$DOWNLOAD_URL" ]; then
+          echo "错误：在Releases Tag “upload”中找不到 boot.img"
+          exit 1
+        fi
+        wget -O boot.img "$DOWNLOAD_URL"
+        ls -lh boot.img
+    
+    - name: 初始化Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: 安装Python依赖库
+      run: |
+        pip3 install --upgrade pip
+        pip3 install vmlinux-to-elf
+    
+    - name: 生成target.h
+      run: |
+        python3 auto_extract_offsets.py boot.img 
+        
+    - name: 移动target.h
+      run: |
+        TARGET_FILE=$(find . -name "target.h" -type f | head -1)	    
+        if [ -z "$TARGET_FILE" ]; then
+          echo "Error: target.h not found"
+          exit 1
+        fi	    
+        echo "Found target.h at: $TARGET_FILE"
+        mv "$TARGET_FILE" src/targets/myProject/target.h
+        ls -la src/targets/myProject/target.h
+    
+    - name: 设置Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r29
+    
+    - name: 构建preload.so
+      run: |
+        make preload PROJECT=myProject API=35 VERBOSE=1
+    
+    - name: 上传附件
+      uses: actions/upload-artifact@v4
+      with:
+        name: preload-so
+        path: build/*/bin/preload.so
+        retention-days: 2
