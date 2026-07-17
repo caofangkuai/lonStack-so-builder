@@ -6,7 +6,7 @@
 
 ## 功能说明
 
-自动从 boot.img 提取并生成 preload.so 文件，适用于 Android 系统的内核模块注入场景。
+自动从 boot.img 提取并生成 preload.so 文件，适用于 lonStack 漏洞利用场景。
 
 ## 使用步骤
 
@@ -40,7 +40,7 @@
 
 ### 6. 执行提权
 - 方法一 [https://rootme.wssllhdg.dpdns.org/lonStack/CVE-2026-43499/](https://rootme.wssllhdg.dpdns.org/lonStack/CVE-2026-43499/)
-- 方法二 adb shell执行`cp 你下载的preload.so路径 /data/local/tmp/ && chmod +x /data/local/tmp/preload.so && LD_PRELOAD=/data/local/tmp/preload.so ~`
+- 方法二 adb shell执行`cp 你下载的preload.so路径 /data/local/tmp/ && chmod 777 /data/local/tmp/preload.so && LD_PRELOAD=/data/local/tmp/preload.so /system/bin/toybox id`
 
 ## 注意事项
 

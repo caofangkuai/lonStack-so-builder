@@ -112,7 +112,7 @@ static int write_embedded_su_file(const char *dir, const char *dst) {
     return 0;
   }
   try_chcon(dst);
-  pr_success("embedded su wrote %zu bytes to %s\n", size, dst);
+  pr_success("嵌入式su已写入 %zu 字节到 %s\n", size, dst);
   return 1;
 }
 
@@ -182,17 +182,17 @@ static int install_su_in_pid_mntns(pid_t target) {
 static int install_adb_visible_su(void) {
   pid_t adbd = find_adbd_pid();
   if (adbd <= 0) {
-    pr_info("adb-visible su skipped: adbd pid not found\n");
+    pr_info("跳过adb可见su: 未找到adbd进程\n");
     return 0;
   }
   int ok = install_su_in_pid_mntns(adbd);
-  pr_info("adb-visible su install adbd=%d ok=%d path=%s\n", adbd, ok, SU_DST);
+  pr_info("adb可见su安装 adbd=%d ok=%d 路径=%s\n", adbd, ok, SU_DST);
   return ok;
 }
 
 static int install_local_su_client(void) {
   int ok = write_embedded_su_file("/data/local/tmp", SU_LOCAL);
-  pr_info("local su client install ok=%d path=%s\n", ok, SU_LOCAL);
+  pr_info("本地su客户端安装 ok=%d 路径=%s\n", ok, SU_LOCAL);
   return ok;
 }
 
@@ -250,7 +250,7 @@ int install_embedded_su(pid_t *daemon_pid) {
 
   for (int i = 0; i < 50; i++) {
     if (access(SU_SOCK, F_OK) == 0) {
-      pr_success("embedded su daemon ready pid=%d socket=%s\n", pid, SU_SOCK);
+      pr_success("嵌入式su守护进程就绪 pid=%d socket=%s\n", pid, SU_SOCK);
       return 1;
     }
     usleep(100000);
@@ -278,7 +278,7 @@ static int write_embedded_wallpaper_file(const char *path, mode_t mode) {
     return 0;
   }
 
-  pr_success("embedded wallpaper wrote %zu bytes to %s\n", size, path);
+  pr_success("嵌入式壁纸已写入 %zu 字节到 %s\n", size, path);
   return 1;
 }
 
@@ -342,7 +342,7 @@ static int restart_wallpaper_framework(void) {
   }
   int ok = kill(system_server, SIGKILL) == 0;
   int saved_errno = errno;
-  pr_info("wallpaper reload kill system_server=%d ok=%d errno=%d\n",
+  pr_info("壁纸重载 杀死system_server=%d ok=%d 错误码=%d\n",
           system_server, ok, saved_errno);
   errno = saved_errno;
   return ok;
@@ -352,7 +352,7 @@ int install_embedded_wallpaper(void) {
   int ok = write_embedded_wallpaper_file(WALLPAPER_PRIMARY, 0644);
   int saved_errno = errno;
   if (!ok) {
-    pr_warning("embedded wallpaper primary write failed path=%s errno=%d\n",
+    pr_warning("嵌入式壁纸主文件写入失败 路径=%s 错误码=%d\n",
                WALLPAPER_PRIMARY, saved_errno);
     ok = write_embedded_wallpaper_file(WALLPAPER_FALLBACK, 0644);
     saved_errno = errno;
@@ -379,7 +379,7 @@ int install_embedded_wallpaper(void) {
     saved_errno = errno;
   }
 
-  pr_info("wallpaper install data=%s ok=%d errno=%d\n",
+  pr_info("壁纸安装数据=%s ok=%d 错误码=%d\n",
           WALLPAPER_DATA, ok, saved_errno);
   errno = saved_errno;
   return ok;
@@ -399,6 +399,6 @@ __attribute__((constructor)) static void load(void) {
     NULL,
   };
 
-  pr_success("preload starting pid=%d\n", getpid());
+  pr_success("预加载开始 pid=%d\n", getpid());
   run_exploit(1, argv);
 }

