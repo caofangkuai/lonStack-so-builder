@@ -90,13 +90,9 @@ int spawn_root_child(void) {
       report.su_install_ret = install_embedded_su(&report.su_daemon_pid);
       report.su_install_errno = errno;
       errno = 0;
-      report.wallpaper_ret = install_embedded_wallpaper();
-      report.wallpaper_errno = errno;
     } else {
       report.su_install_ret = 0;
       report.su_install_errno = EPERM;
-      report.wallpaper_ret = 0;
-      report.wallpaper_errno = EPERM;
     }
     root_shared->report = report;
     atomic_store(&root_shared->done, 1);
@@ -432,13 +428,12 @@ int install_android_root(int fd) {
   capable_head_after = pipe_read64(fd, data_addr(SECURITY_CAPABLE_HEAD));
   pipe_phys_read_data(fd, selinux_addr, &selinux_after, sizeof(selinux_after));
   pr_info("root子进程结果 done=%d uid_after=%u setgid=%d/%d setuid=%d/%d "
-          "setenforce=%d/%d su=%d/%d daemon=%d wallpaper=%d/%d selinux=%u->%u "
+          "setenforce=%d/%d su=%d/%d daemon=%d selinux=%u->%u "
           "cap=%016llx/%016llx\n",
           root_child_done, root_uid_after, report.setgid_ret,
           report.setgid_errno, report.setuid_ret, report.setuid_errno,
           setenforce_ret, setenforce_errno, report.su_install_ret,
-          report.su_install_errno, report.su_daemon_pid, report.wallpaper_ret,
-          report.wallpaper_errno,
+          report.su_install_errno, report.su_daemon_pid,
           selinux_before, selinux_after,
           (unsigned long long)capable_head_before,
           (unsigned long long)capable_head_after);

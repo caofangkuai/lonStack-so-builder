@@ -1,37 +1,27 @@
 API ?= 35
-PROJECT ?= myProject
-OUTDIR ?= build/$(PROJECT)/bin
+OUTDIR ?= build/bin
 EMBEDDIR ?= build/embed
-
-TARGET_DIR := src/targets/$(PROJECT)
-TARGET_HEADER := $(TARGET_DIR)/target.h
-
-ifeq ($(wildcard $(TARGET_HEADER)),)
-$(error unknown PROJECT=$(PROJECT), missing $(TARGET_HEADER))
-endif
-
-define pick_src
-$(if $(wildcard $(TARGET_DIR)/$(1)),$(TARGET_DIR)/$(1),src/$(1))
-endef
+TARGET_HEADER ?= src/target.h
 
 EMBED_SU := $(EMBEDDIR)/su_daemon_aarch64_pie
 PRELOAD := $(OUTDIR)/preload.so
-WALLPAPER := assets/wallpaper.webp
 
 CORE_SRCS := \
-  $(call pick_src,main.c) \
-  $(call pick_src,util.c) \
-  $(call pick_src,slide.c) \
-  $(call pick_src,fops.c) \
-  $(call pick_src,pipe.c) \
+  src/main.c \
+  src/util.c \
+  src/slide.c \
+  src/fops.c \
+  src/pipe.c \
   src/root.c
-PRELOAD_SRCS := $(CORE_SRCS) src/preload.c src/su_blob.S src/wallpaper_blob.S
+PRELOAD_SRCS := $(CORE_SRCS) src/preload.c src/su_blob.S
 
 .DEFAULT_GOAL := preload
 
 DEFAULT_NDK_ROOT := $(HOME)/android-ndk-cache/android-ndk-r29
-NDK_ROOT ?= $(or $(ANDROID_NDK_HOME),$(ANDROID_NDK_ROOT),$(wildcard $(DEFAULT_NDK_ROOT)))
-NDK_TOOLCHAIN ?= $(if $(NDK_ROOT),$(NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64)
+DARWIN_NDK_ROOT := $(lastword $(sort $(wildcard $(HOME)/Library/Android/sdk/ndk/*)))
+NDK_ROOT ?= $(or $(ANDROID_NDK_HOME),$(ANDROID_NDK_ROOT),$(wildcard $(DEFAULT_NDK_ROOT)),$(DARWIN_NDK_ROOT))
+NDK_PREBUILT := $(if $(filter Darwin,$(shell uname -s)),darwin-x86_64,linux-x86_64)
+NDK_TOOLCHAIN ?= $(if $(NDK_ROOT),$(NDK_ROOT)/toolchains/llvm/prebuilt/$(NDK_PREBUILT))
 NDK_CC := $(NDK_TOOLCHAIN)/bin/aarch64-linux-android$(API)-clang
 HOST_CLANG ?= clang
 SYSROOT ?= $(if $(NDK_TOOLCHAIN),$(NDK_TOOLCHAIN)/sysroot)
@@ -81,13 +71,17 @@ COMMON_CFLAGS := -O2 -g0 -Wall -Wextra -Isrc
 PIE_CFLAGS := -fPIE -pie $(COMMON_CFLAGS)
 SO_CFLAGS := -fPIC $(COMMON_CFLAGS)
 WARN_CFLAGS := -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function
-TARGET_CFLAGS := -DTARGET_CONFIG_H=\"targets/$(PROJECT)/target.h\"
+TARGET_CFLAGS := -DTARGET_CONFIG_H=\"target.h\"
 
-.PHONY: all preload clean info list-projects
+.PHONY: all preload clean info
 
 all: preload
 
-preload: $(PRELOAD)
+preload: $(TARGET_HEADER) $(PRELOAD)
+
+$(TARGET_HEADER):
+	@echo "missing $@; generate it from boot.img before building" >&2
+	@false
 
 $(OUTDIR):
 	mkdir -p $@
@@ -99,26 +93,21 @@ $(EMBED_SU): src/su_daemon.c | $(EMBEDDIR)
 	$(TARGET_CC) $(TARGET_FLAGS) $(PIE_CFLAGS) $(TARGET_CFLAGS) \
 	  $< $(TARGET_PIE_LDFLAGS) -o $@
 
-$(PRELOAD): $(PRELOAD_SRCS) $(EMBED_SU) $(WALLPAPER) $(TARGET_HEADER) src/offset.h src/common.h src/kernelsnitch/*.h | $(OUTDIR)
+$(PRELOAD): $(PRELOAD_SRCS) $(EMBED_SU) $(TARGET_HEADER) src/offset.h src/common.h src/kernelsnitch/*.h | $(OUTDIR)
 	$(TARGET_CC) $(TARGET_FLAGS) $(SO_CFLAGS) $(WARN_CFLAGS) $(TARGET_CFLAGS) \
 	  $(PRELOAD_SRCS) $(TARGET_COMMON_LDFLAGS) \
 	  -shared -o $@ -pthread
 	sha256sum $@
 
 info:
-	@echo "PROJECT=$(PROJECT)"
-	@echo "TARGET_DIR=$(TARGET_DIR)"
+	@echo "TARGET_HEADER=$(TARGET_HEADER)"
 	@echo "TARGET_CC=$(TARGET_CC)"
 	@echo "TARGET_FLAGS=$(TARGET_FLAGS)"
 	@echo "TARGET_COMMON_LDFLAGS=$(TARGET_COMMON_LDFLAGS)"
 	@echo "TARGET_PIE_LDFLAGS=$(TARGET_PIE_LDFLAGS)"
 	@echo "PRELOAD=$(PRELOAD)"
 	@echo "EMBED_SU=$(EMBED_SU)"
-	@echo "WALLPAPER=$(WALLPAPER)"
 	@echo "CORE_SRCS=$(CORE_SRCS)"
-
-list-projects:
-	@find src/targets -mindepth 2 -maxdepth 2 -name target.h -printf '%h\n' | sed 's#src/targets/##' | sort
 
 clean:
 	rm -rf build

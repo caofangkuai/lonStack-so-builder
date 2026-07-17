@@ -55,12 +55,6 @@ int install_embedded_su(pid_t *daemon_pid) {
   return 0;
 }
 
-__attribute__((weak))
-int install_embedded_wallpaper(void) {
-  errno = ENOSYS;
-  return 0;
-}
-
 void read_first_line(const char *path, char *buf, size_t len) {
   if (!len) {
     return;

@@ -44,7 +44,7 @@ jobs:
     
     - name: 生成target.h
       run: |
-        python3 auto_extract_offsets.py boot.img 
+        python3 auto_extract_offsets.py boot.img
     
     - name: 移动target.h
       run: |
@@ -54,8 +54,7 @@ jobs:
           exit 1
         fi
         echo "Found target.h at: $TARGET_FILE"
-        mv "$TARGET_FILE" src/targets/myProject/target.h
-        ls -la src/targets/myProject/target.h
+        mv "$TARGET_FILE" src/target.h
     
     - name: 设置Android NDK
       uses: nttld/setup-ndk@v1
@@ -64,12 +63,12 @@ jobs:
     
     - name: 构建preload.so
       run: |
-        make preload PROJECT=myProject API=35 VERBOSE=1
+        make preload API=35 VERBOSE=1
     
     - name: 上传附件
       uses: actions/upload-artifact@v7
       with:
         name: preload-so
-        path: build/myProject/bin/preload.so
-        retention-days: 2
+        path: build/bin/preload.so
+        retention-days: 1
         archive: false
